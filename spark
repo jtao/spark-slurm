@@ -36,13 +36,13 @@ set -e
 # The directory used to keep information about active (pending or running)
 # and inactive (finshed, failed) clusters. Something like /data/$USER/.spark
 soc_sparkdir=./x
-
+soc_scratch=/home/jtao/scratch/pyspark/spark-slurm/scratch
 # The headnode of the cluster. Used to construct the command for setting
 # up an ssh tunnel to the spark master's web ui
 soc_headnode=x.x.x
 
 # Spark version to use. Assumes that a 'module load' command is available
-soc_sparkver=2.4.0
+soc_sparkver=2.4.0-intel-2018b-Python-3.6.6
 
 ################################################################################
 #                                   Globals                                    #
@@ -192,7 +192,7 @@ function start {
         | sed "s:<SOC_PROP>:${soc_prop}:g" \
         | sed "s:<SOC_COPY_LOGS>:${soc_copy_logs}:g" \
         > "${cluster}/jobscript.sh"
-    job_id=$(sbatch "${cluster}/jobscript.sh")
+    job_id=$(sbatch --parsable "${cluster}/jobscript.sh")
     echo "${job_id}" > "${cluster}/slurm_job_id"
     prop "job_id" "${job_id}" "${soc_prop}"
     info "Submitted job for cluster ${cluster_id}"
@@ -439,14 +439,14 @@ exit
 
 #__SBATCH__
 #! /bin/bash
-#SBATCH --constraint=cpu56,g256
+##SBATCH --constraint=cpu56,g256
 #SBATCH --nodes=<SOC_NNODES>
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=56
+##SBATCH --cpus-per-task=56
 #SBATCH --mem-per-cpu=4400
 #SBATCH --time=<SOC_TIME>
-#SBATCH --partition=multinode
-#SBATCH --gres=lscratch:380
+##SBATCH --partition=multinode
+##SBATCH --gres=lscratch:380
 #SBATCH --out=<SOC_SPARKLOGDIR>/slurm.log
 #SBATCH --signal=B:USR1@180
 
@@ -480,9 +480,9 @@ function shutdown_cluster {
 cp -r ${SCRATCH}/logs/* <SOC_SPARKLOGDIR>
 EOF
         chmod +x /tmp/soc_copy_logs.sh
-        sbcast /tmp/soc_copy_logs.sh /lscratch/${SLURM_JOB_ID}/copy_logs.sh
+        sbcast /tmp/soc_copy_logs.sh ${soc_scratch}/${SLURM_JOB_ID}/copy_logs.sh
 
-    srun /lscratch/${SLURM_JOB_ID}/copy_logs.sh
+    srun ${soc_scratch}/${SLURM_JOB_ID}/copy_logs.sh
     rm /tmp/soc_copy_logs.sh
     fi
 
@@ -491,20 +491,21 @@ EOF
 }
 
 prop "start" "$(date +'%F %T')"
-module load spark/<SOC_SPARKVER> || fail "Could not load spark module"
+module load Spark/<SOC_SPARKVER> || fail "Could not load spark module"
 
 ###
 ### configuration files and job setup
 ###
 
 # Set up node local scratch directories on all the nodes
-export SCRATCH="/lscratch/${SLURM_JOB_ID}"
+soc_scratch=/home/jtao/scratch/pyspark/spark-slurm/scratch
+export SCRATCH="${soc_scratch}/${SLURM_JOB_ID}"
 export SPARK_CONF_DIR="${SCRATCH}/conf"
-srun -l mkdir "${SPARK_CONF_DIR}" \
-    && srun -l mkdir "${SCRATCH}/logs" \
-    && srun -l mkdir "${SCRATCH}/work" \
-    && srun -l mkdir "${SCRATCH}/local" \
-    && srun -l mkdir "${SCRATCH}/pid" \
+srun -l mkdir -p "${SPARK_CONF_DIR}" \
+    && srun -l mkdir -p "${SCRATCH}/logs" \
+    && srun -l mkdir -p "${SCRATCH}/work" \
+    && srun -l mkdir -p "${SCRATCH}/local" \
+    && srun -l mkdir -p "${SCRATCH}/pid" \
     || fail "Could not set up node local directories"
 
 # slave node list - includes the batch host
