@@ -12,27 +12,7 @@ The follwing was run in an sinteractive session so that the spark shell (or
 pyspark in my case) didn't itself run on the login node:
 
 ```
-$ module load spark/2.1.1
-$ spark
-NAME
-        spark - administer spark clusters on compute nodes
-
-SYNOPSIS
-        spark cmd [options]
-
-COMMANDS
-        help   - show this help or help for specific cmd
-        start  - start a new spark cluster
-        list   - list clusters
-        show   - show cluster details
-        stop   - shut down a cluster
-        clean  - clean up the directory where cluster
-                 info is stored (/data/wresch/.spark-on-biowulf)
-
-DESCRIPTION
-        This tool is used to start, stop, monitor, and
-        use spark clusters running on compute nodes.
-```
+$ module load Spark/2.4.0-intel-2018b-Python-3.6.6
 
 Start a cluster with 3 nodes and a max runtime of 120 minutes:
 ```
