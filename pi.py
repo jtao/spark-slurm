@@ -5,7 +5,7 @@ def inside(p):
   x, y = random.random(), random.random()
   return x*x + y*y < 1
 
-num_samples = 1000000000
+num_samples = 100000000
 
 sc = spark.SparkContext(appName="Pi")
 
